@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDSF機設置条件クイックチェッカー - MDSFシリーズ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 基本セットアップ */
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b0f19; /* 極めて深いネイビー（ダークモード） */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            color: #f8fafc;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        /* iPhone/Safari 縦画面表示に最適化したコンテナ */
+        .slide-container {
+            width: 100%;
+            max-width: 480px; /* iPhone Pro Maxクラスの幅にフィット */
+            min-height: 100vh;
+            background-color: #0f172a;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            background-image: 
+                radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+                linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95));
+        }
+
+        /* トップ装飾バー */
+        .slide-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #fbbf24, #f87171, #60a5fa);
+        }
+
+        /* バージョン表示用のスタイル */
+        .version-tag {
+            position: absolute;
+            top: 8px;
+            right: 15px;
+            font-size: 10px;
+            color: #64748b;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 500;
+        }
+
+        /* ヘッダー */
+        .header {
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #38bdf8;
+            padding-left: 12px;
+        }
+
+        .slide-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 0.02em;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #f87171; /* 注意喚起のためマイルドな警告赤系色に調整 */
+            margin-top: 4px;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* メインレイアウト */
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        /* 上部：セレクター（プルダウンエリア） */
+        .selector-section {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .selector-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .selector-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .selector-label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .selector-group label {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        /* 未所有バッジ */
+        .ownership-badge {
+            font-size: 9px;
+            background-color: #f97316;
+            color: #ffffff;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            display: none; /* JSで切り替え */
+            animation: pulse 1.5s infinite;
+        }
+
+        /* iPhoneで押しやすい大きなセレクトボックス */
+        .custom-select {
+            width: 100%;
+            background-color: #1e293b;
+            color: #ffffff;
+            border: 1.5px solid #475569;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            -webkit-appearance: none; /* デフォルトの矢印をリセット */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+
+        .custom-select:focus {
+            border-color: #38bdf8;
+        }
+
+        /* 未所有機選択時のセレクトボックスの見た目 */
+        .custom-select.unowned-selected {
+            border-color: #f97316;
+        }
+
+        /* 干渉アラートステータス */
+        .status-badge {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            line-height: 1.4;
+        }
+
+        .status-ok {
+            background-color: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+
+        .status-warning {
+            background-color: rgba(249, 115, 22, 0.15);
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            color: #fb923c;
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* 中部：数値ディスプレイ（特大カード） */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .result-card {
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 8px 4px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 90px; /* 2段表示に対応するため少し高さを確保 */
+        }
+
+        .result-card-title {
+            font-size: 8px;
+            font-weight: 700;
+            color: #94a3b8;
+            line-height: 1.3;
+            padding: 0 2px;
+        }
+
+        .result-card-value {
+            font-size: 16px;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* 2段目の加工機仕様値用の表示スタイル */
+        .result-card-subvalue {
+            font-size: 10px;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 500;
+            color: #a8a29e;
+            margin-top: 2px;
+        }
+
+        .card-body { border-bottom: 3px solid #facc15; }
+        .card-body .result-card-value { color: #facc15; }
+
+        .card-cut { border-bottom: 3px solid #f87171; }
+        .card-cut .result-card-value { color: #f87171; }
+
+        .card-bevel { border-bottom: 3px solid #60a5fa; }
+        .card-bevel .result-card-value { color: #60a5fa; }
+
+        /* 下部：図面エリア */
+        .diagram-area {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: inset 0 0 15px rgba(56, 189, 248, 0.05);
+        }
+
+        .diagram-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 6px;
+        }
+
+        .spec-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #94a3b8;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* SVGグラフィックコンテナ */
+        .svg-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px;
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+            max-width: 320px;
+        }
+
+        /* SVGアニメーション */
+        svg circle, 
+        svg path,
+        svg line, 
+        svg text {
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* フッター：仕様注記 */
+        .footer {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 10px;
+            color: #94a3b8;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            padding-top: 10px;
+        }
+
+        .formula-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .formula-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            line-height: 1.4;
+        }
+
+        .color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+        .dot-body { background-color: #facc15; }
+        .dot-cut { background-color: #f87171; }
+        .dot-bevel { background-color: #60a5fa; }
+        .dot-attachment { background-color: #c084fc; } /* アタッチメント色（薄紫） */
+
+        .formula-text strong {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .unit-label {
+            font-size: 9px;
+            background: rgba(148, 163, 184, 0.1);
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="slide-container">
+    <!-- バージョン追記（Ver. 10.02） -->
+    <div class="version-tag">Ver. 10.02</div>
+
+    <!-- ヘッダー -->
+    <div class="header">
+        <h1 class="slide-title">MDSF機設置条件クイックチェッカー</h1>
+        <div class="subtitle">注）標準仕様でのチェックです。加工実施の際は実機の確認をお願いします。</div>
+    </div>
+
+    <!-- メインレイアウト -->
+    <div class="main-layout">
+        <!-- 上部：セレクター -->
+        <div class="selector-section">
+            <div class="selector-row">
+                <div class="selector-group">
+                    <label for="select-pipe">① 配管サイズの選定</label>
+                    <select id="select-pipe" class="custom-select">
+                        <option value="165.2" data-size="6B" selected>6B (φ165.2 mm)</option>
+                        <option value="216.3" data-size="8B">8B (φ216.3 mm)</option>
+                        <option value="267.4" data-size="10B">10B (φ267.4 mm)</option>
+                        <option value="318.5" data-size="12B">12B (φ318.5 mm)</option>
+                        <option value="355.6" data-size="14B">14B (φ355.6 mm)</option>
+                        <option value="406.4" data-size="16B">16B (φ406.4 mm)</option>
+                        <option value="457.2" data-size="18B">18B (φ457.2 mm)</option>
+                        <option value="508.0" data-size="20B">20B (φ508.0 mm)</option>
+                        <option value="558.78" data-size="22B">22B (φ558.78 mm)</option>
+                        <option value="609.6" data-size="24B">24B (φ609.6 mm)</option>
+                        <option value="660.4" data-size="26B">26B (φ660.4 mm)</option>
+                        <!-- 追加配管規格 -->
+                        <option value="711.2" data-size="28B">28B (φ711.2 mm)</option>
+                        <option value="762.0" data-size="30B">30B (φ762.0 mm)</option>
+                        <option value="812.8" data-size="32B">32B (φ812.8 mm)</option>
+                        <option value="863.6" data-size="34B">34B (φ863.6 mm)</option>
+                        <option value="914.4" data-size="36B">36B (φ914.4 mm)</option>
+                        <option value="1016.0" data-size="38B">38B (φ1016.0 mm)</option>
+                    </select>
+                </div>
+                <div class="selector-group">
+                    <div class="selector-label-container">
+                        <label for="select-machine">② 使用機械の選定</label>
+                        <span id="ownership-status" class="ownership-badge">⚠️ 未所有機</span>
+                    </div>
+                    <select id="select-machine" class="custom-select">
+                        <option value="470.0" data-model="MDSF612" data-inner="336.0" data-bs="60" data-min="233.6" data-max="335.2" data-owned="true" selected>MDSF612 (外径φ470)</option>
+                        <option value="505.5" data-model="MDSF814" data-inner="372.0" data-bs="60" data-min="269.1" data-max="370.7" data-owned="true">MDSF814 (外径φ505.5)</option>
+                        <option value="557.5" data-model="MDSF1016" data-inner="422.0" data-bs="60" data-min="319.9" data-max="421.5" data-owned="true">MDSF1016 (外径φ557.5)</option>
+                        <option value="608.3" data-model="MDSF1218" data-inner="473.0" data-bs="60" data-min="370.6" data-max="472.2" data-owned="false">MDSF1218 (外径φ608.3)</option>
+                        <option value="660.0" data-model="MDSF1420" data-inner="524.0" data-bs="100" data-min="421.4" data-max="523.0" data-owned="true">MDSF1420 (外径φ660)</option>
+                        <option value="771.0" data-model="MDSF1824" data-inner="636.0" data-bs="100" data-min="533.1" data-max="634.7" data-owned="true">MDSF1824 (外径φ771)</option>
+                        <option value="903.0" data-model="MDSF2228" data-inner="738.0" data-bs="60" data-min="634.9" data-max="736.5" data-owned="false">MDSF2228 (外径φ903)</option>
+                        <option value="1005.0" data-model="MDSF2632" data-inner="840.0" data-bs="60" data-min="736.5" data-max="838.1" data-owned="true">MDSF2632 (外径φ1005)</option>
+                        <!-- 追加モデル（未所有） -->
+                        <option value="1122.0" data-model="MDSF3036" data-inner="957.0" data-bs="60" data-min="853.3" data-max="954.9" data-owned="false">MDSF3036 (外径φ1122)</option>
+                        <option value="1274.0" data-model="MDSF3624" data-inner="1109.0" data-bs="60" data-min="1005.7" data-max="1107.3" data-owned="false">MDSF3624 (外径φ1274)</option>
+                        <option value="1427.0" data-model="MDSF4248" data-inner="1262.0" data-bs="60" data-min="1158.1" data-max="1259.7" data-owned="false">MDSF4248 (外径φ1427)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- リアルタイム干渉ステータス -->
+            <div id="status-display" class="status-badge status-ok">
+                <span>✓ クランプ・干渉チェック: 正常に装着可能です</span>
+            </div>
+        </div>
+
+        <!-- 中部：デジタルディスプレイ -->
+        <div class="results-grid">
+            <div class="result-card card-body">
+                <span class="result-card-title">本体クリアランス (A)<br><span style="font-weight: 500; opacity: 0.85;">[加工機 外径/内径]</span></span>
+                <span id="card-body-val" class="result-card-value">152.40</span>
+                <span id="card-inner-val" class="result-card-subvalue">φ470.0 / φ336.0</span>
+            </div>
+            <div class="result-card card-cut">
+                <span class="result-card-title">スライドベース（ミドル）<br>取付時回転域半径 (B)</span>
+                <span id="card-cut-val" class="result-card-value">262.40</span>
+                <span style="font-size: 9px; opacity: 0;">Spacer</span>
+            </div>
+            <div class="result-card card-bevel">
+                <span class="result-card-title">ブリッジスライド<br>取付時回転域半径 (C)</span>
+                <span id="card-bevel-val" class="result-card-value">212.40</span>
+                <span style="font-size: 9px; opacity: 0;">Spacer</span>
+            </div>
+        </div>
+
+        <!-- 下部：図面エリア -->
+        <div class="diagram-area">
+            <div class="diagram-header">
+                <span>実寸比率表示</span>
+                <span id="machine-spec-badge" class="spec-badge">内径 φ336 / BS 60mm</span>
+            </div>
+
+            <!-- ベクターCAD図面 -->
+            <div class="svg-container">
+                <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- マーカー（矢印）定義 -->
+                    <defs>
+                        <!-- 被り（重なり）を防ぐため、矢印の長さを半減させ、細身で極めてシャープなデザイン（長さ6、幅3.2、refX=6）に変更 -->
+                        <marker id="arrow-body" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                            <path d="M 1 1.5 L 6 3 L 1 4.5 L 2.2 3 Z" fill="#facc15"/>
+                        </marker>
+                        <marker id="arrow-cut" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                            <path d="M 1 1.5 L 6 3 L 1 4.5 L 2.2 3 Z" fill="#f87171"/>
+                        </marker>
+                        <marker id="arrow-bevel" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                            <path d="M 1 1.5 L 6 3 L 1 4.5 L 2.2 3 Z" fill="#60a5fa"/>
+                        </marker>
+                        <marker id="arrow-attachment" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                            <path d="M 1 1.5 L 6 3 L 1 4.5 L 2.2 3 Z" fill="#c084fc"/>
+                        </marker>
+                    </defs>
+
+                    <!-- 中心補助線 -->
+                    <line x1="50" y1="200" x2="350" y2="200" stroke="#334155" stroke-width="1" stroke-dasharray="5 3"/>
+                    <line x1="200" y1="50" x2="200" y2="350" stroke="#334155" stroke-width="1" stroke-dasharray="5 3"/>
+
+                    <!-- ① 配管 (Pipe) -->
+                    <circle id="svg-pipe-circle" cx="200" cy="200" r="50" stroke="#94a3b8" stroke-width="3" fill="#1e293b" fill-opacity="0.8"/>
+                    <text x="200" y="195" fill="#94a3b8" font-size="12" font-weight="bold" text-anchor="middle">配管 (Pipe)</text>
+                    <text id="svg-pipe-val" x="200" y="213" fill="#ffffff" font-size="13" font-family="'Roboto Mono'" font-weight="bold" text-anchor="middle">φ165.2</text>
+
+                    <!-- ② 機械本体の「肉厚（フレーム）」を薄いグレーでドーナツ状に塗りつぶし表示 -->
+                    <path id="svg-machine-donut" fill="rgba(148, 163, 184, 0.22)" fill-rule="evenodd" />
+
+                    <!-- ③ 機械内径 (機械通し開口部) 補助サークル -->
+                    <circle id="svg-machine-inner-circle" cx="200" cy="200" r="85" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.5"/>
+
+                    <!-- クランプブロックのグラフィック描画コンテナ（上下左右の0-90-180-270度配置） -->
+                    <g id="svg-blocks-container"></g>
+
+                    <!-- ④ 機械外径フレーム (Machine Body) -->
+                    <circle id="svg-machine-circle-dash" cx="200" cy="200" r="100" stroke="#475569" stroke-width="2.2" stroke-dasharray="4 2"/>
+                    <circle id="svg-machine-circle-solid" cx="200" cy="200" r="105" stroke="#facc15" stroke-width="1.8" stroke-opacity="0.4"/>
+                    <text id="svg-machine-label" x="200" y="115" fill="#facc15" font-size="11" font-weight="bold" text-anchor="middle" fill-opacity="0.8">機械本体枠</text>
+
+                    <!-- [左側エリア：内径クリアランス (紫) 縦寸法線] -->
+                    <line id="line-attachment" x1="115" y1="200" x2="115" y2="250" stroke="#c084fc" stroke-width="3.5" marker-start="url(#arrow-attachment)" marker-end="url(#arrow-attachment)"/>
+                    <line id="aux-attach-left" x1="200" y1="200" x2="103" y2="200" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <line id="aux-attach-right" x1="200" y1="250" x2="103" y2="250" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <text id="lbl-attach-val" x="100" y="230" fill="#c084fc" font-size="16" font-family="'Roboto Mono'" font-weight="700" text-anchor="end">85.40</text>
+                    <text id="lbl-attach-title" x="100" y="245" fill="#c084fc" font-size="9.5" text-anchor="end">内径クリアランス</text>
+
+                    <!-- [右側エリアA: 加工機本体外径 (黄)] -->
+                    <line id="line-body" x1="250" y1="260" x2="305" y2="260" stroke="#facc15" stroke-width="3.5" marker-start="url(#arrow-body)" marker-end="url(#arrow-body)"/>
+                    <line id="aux-body-left" x1="250" y1="200" x2="250" y2="272" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <line id="aux-body-right" x1="305" y1="200" x2="305" y2="272" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <text id="lbl-body-val" x="277.5" y="285" fill="#facc15" font-size="17" font-family="'Roboto Mono'" font-weight="700" text-anchor="middle">152.40</text>
+                    <text id="lbl-body-title" x="277.5" y="298" fill="#facc15" font-size="10.5" text-anchor="middle">本体クリアランス (A)</text>
+
+                    <!-- [右側エリアB: 回転域(ベース) (赤)] -->
+                    <line id="line-cut" x1="250" y1="325" x2="340" y2="325" stroke="#f87171" stroke-width="3.5" marker-start="url(#arrow-cut)" marker-end="url(#arrow-cut)"/>
+                    <line id="aux-cut-left" x1="250" y1="200" x2="250" y2="337" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <line id="aux-cut-right" x1="340" y1="200" x2="340" y2="337" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <text id="lbl-cut-val" x="295" y="350" fill="#f87171" font-size="17" font-family="'Roboto Mono'" font-weight="700" text-anchor="middle">262.40</text>
+                    <text id="lbl-cut-title" x="295" y="363" fill="#f87171" font-size="9.5" text-anchor="middle">回転域(ベース) (B)</text>
+
+                    <!-- [右側エリアC: 回転域(ブリッジ) (青)] -->
+                    <line id="line-bevel" x1="250" y1="40" x2="325" y2="40" stroke="#60a5fa" stroke-width="3.5" marker-start="url(#arrow-bevel)" marker-end="url(#arrow-bevel)"/>
+                    <line id="aux-bevel-left" x1="250" y1="200" x2="250" y2="28" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <line id="aux-bevel-right" x1="325" y1="200" x2="325" y2="28" stroke="#475569" stroke-width="1.8" stroke-dasharray="2 2"/>
+                    <text id="lbl-bevel-val" x="287.5" y="60" fill="#60a5fa" font-size="17" font-family="'Roboto Mono'" font-weight="700" text-anchor="middle">212.40</text>
+                    <text id="lbl-bevel-title" x="287.5" y="23" fill="#60a5fa" font-size="9.5" text-anchor="middle">回転域(ブリッジ) (C)</text>
+
+                    <!-- 最外周イメージの補助円弧 -->
+                    <circle id="svg-cut-limit-circle" cx="200" cy="200" r="140" stroke="#f87171" stroke-width="1.2" stroke-dasharray="6 4" stroke-opacity="0.25"/>
+                    <circle id="svg-bevel-limit-circle" cx="200" cy="200" r="125" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="6 4" stroke-opacity="0.25"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- フッター -->
+    <div class="footer">
+        <div class="formula-list">
+            <div class="formula-item">
+                <span class="color-dot dot-attachment"></span>
+                <span class="formula-text"><strong>内径クリアランス</strong> = (加工機内径 － 配管外径) ÷ 2 （アタッチメント部）</span>
+            </div>
+            <div class="formula-item">
+                <span class="color-dot dot-body"></span>
+                <span class="formula-text"><strong>本体クリアランス (A)</strong> = (加工機外径 － 配管外径) ÷ 2</span>
+            </div>
+            <div class="formula-item">
+                <span class="color-dot dot-cut"></span>
+                <span class="formula-text"><strong>スライドベース（ミドル）取付時回転域半径 (B)</strong> = (A) ＋ 110mm</span>
+            </div>
+            <div class="formula-item">
+                <span class="color-dot dot-bevel"></span>
+                <span class="formula-text"><strong>ブリッジスライド取付時回転域半径 (C)</strong> = (A) ＋ BS値</span>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>※BS値=開先スライドベース幅(60mm / 100mm)</span>
+            <div class="unit-label">単位: mm</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // セレクター要素
+        const selectPipe = document.getElementById("select-pipe");
+        const selectMachine = document.getElementById("select-machine");
+
+        // ステータス表示
+        const statusDisplay = document.getElementById("status-display");
+        const ownershipStatus = document.getElementById("ownership-status");
+        const specBadge = document.getElementById("machine-spec-badge");
+
+        // テキスト・デジタル数値カード要素
+        const cardBodyVal = document.getElementById("card-body-val");
+        const cardInnerVal = document.getElementById("card-inner-val"); // 加工機仕様表示用
+        const cardCutVal = document.getElementById("card-cut-val");
+        const cardBevelVal = document.getElementById("card-bevel-val");
+
+        // SVGグラフィック要素
+        const pipeCircle = document.getElementById("svg-pipe-circle");
+        const svgPipeVal = document.getElementById("svg-pipe-val");
+        const machineInnerCircle = document.getElementById("svg-machine-inner-circle");
+        const machineCircleDash = document.getElementById("svg-machine-circle-dash");
+        const machineCircleSolid = document.getElementById("svg-machine-circle-solid");
+        const machineDonut = document.getElementById("svg-machine-donut");
+        const machineLabel = document.getElementById("svg-machine-label");
+        const blocksContainer = document.getElementById("svg-blocks-container");
+
+        // 配管外径〜機械内径寸法線（内径クリアランス）
+        const lineAttachment = document.getElementById("line-attachment");
+        const auxAttachLeft = document.getElementById("aux-attach-left");
+        const auxAttachRight = document.getElementById("aux-attach-right");
+        const lblAttachVal = document.getElementById("lbl-attach-val");
+        const lblAttachTitle = document.getElementById("lbl-attach-title");
+
+        // A (加工機本体外径) 関連
+        const lineBody = document.getElementById("line-body");
+        const auxBodyLeft = document.getElementById("aux-body-left");
+        const auxBodyRight = document.getElementById("aux-body-right");
+        const lblBodyVal = document.getElementById("lbl-body-val");
+        const lblBodyTitle = document.getElementById("lbl-body-title");
+
+        // B (スライドベース取付時回転域半径) 関連
+        const lineCut = document.getElementById("line-cut");
+        const auxCutLeft = document.getElementById("aux-cut-left");
+        const auxCutRight = document.getElementById("aux-cut-right");
+        const lblCutVal = document.getElementById("lbl-cut-val");
+        const lblCutTitle = document.getElementById("lbl-cut-title");
+
+        // C (ブリッジスライド取付時回転域半径) 関連
+        const lineBevel = document.getElementById("line-bevel");
+        const auxBevelLeft = document.getElementById("aux-bevel-left");
+        const auxBevelRight = document.getElementById("aux-bevel-right");
+        const lblBevelVal = document.getElementById("lbl-bevel-val");
+        const lblBevelTitle = document.getElementById("lbl-bevel-title");
+
+        // 可動限界補助サークル
+        const cutLimitCircle = document.getElementById("svg-cut-limit-circle");
+        const bevelLimitCircle = document.getElementById("svg-bevel-limit-circle");
+
+        // --- 寸法スケーリング定数 ---
+        const maxRadiusMM = 820.0; 
+        const maxRadiusPX = 175;   // SVG内の最大描画可能半径(px)
+        const scale = maxRadiusPX / maxRadiusMM; // ピクセル変換スケール
+
+        // シミュレーション計算＆描画関数
+        function runSimulation() {
+            // 現在の選択値を取得
+            const pipeOuter = parseFloat(selectPipe.value); // 配管外径(mm)
+            const pipeSizeText = selectPipe.options[selectPipe.selectedIndex].getAttribute("data-size");
+
+            const selectedMachineOption = selectMachine.options[selectMachine.selectedIndex];
+            const machineOuter = parseFloat(selectMachine.value); // 機械外径(mm)
+            const machineInner = parseFloat(selectedMachineOption.getAttribute("data-inner")); // 機械内径(mm)
+            const machineBS = parseFloat(selectedMachineOption.getAttribute("data-bs")); // BS値(mm)
+            const machineMin = parseFloat(selectedMachineOption.getAttribute("data-min")); // クランプ最小径(mm)
+            const machineMax = parseFloat(selectedMachineOption.getAttribute("data-max")); // クランプ最大径(mm)
+            const machineModelName = selectedMachineOption.getAttribute("data-model");
+            const isOwned = selectedMachineOption.getAttribute("data-owned") === "true";
+
+            // 仕様バッジの書き換え
+            specBadge.textContent = `内径 φ${machineInner} / BS ${machineBS}mm`;
+
+            // --- 1. 未所有警告バッジの表示制御 ---
+            if (isOwned) {
+                ownershipStatus.style.display = "none";
+                selectMachine.classList.remove("unowned-selected");
+            } else {
+                ownershipStatus.style.display = "inline-block";
+                selectMachine.classList.add("unowned-selected");
+            }
+
+            // --- 2. 干渉・不適合チェック ＆ クランプブロック判定 ---
+            let hasError = false;
+            let errorMessage = "";
+            let attachmentText = "";
+            let blockCount = 0; // 必要ブロック数（0, 1, 2）
+
+            const limit_block0 = machineMin; // ブロックなし下限
+            const limit_block1 = machineMin - (45.7 * 2); // ブロック1個下限
+            const limit_block2 = machineMin - (45.7 * 4); // ブロック2個下限
+
+            if (pipeOuter >= machineOuter) {
+                hasError = true;
+                errorMessage = `⚠️ 干渉エラー: 配管径が機械本体(${machineModelName})より太いため装着不可能です`;
+            } else if (pipeOuter > machineInner) {
+                hasError = true;
+                errorMessage = `⚠️ 内径エラー: 配管外径(φ${pipeOuter})が機械内径(φ${machineInner})を超えています`;
+            } else if (pipeOuter > machineMax) {
+                hasError = true;
+                errorMessage = `⚠️ クランプ不可: 配管径が最大クランプ範囲(φ${machineMax})を超えています`;
+            } else {
+                // アタッチメントブロック数の判定
+                if (pipeOuter >= limit_block0) {
+                    attachmentText = "アタッチメント不要（ブロックなし）";
+                    blockCount = 0;
+                } else if (pipeOuter >= limit_block1) {
+                    attachmentText = "アタッチメント1個使用";
+                    blockCount = 1;
+                } else if (pipeOuter >= limit_block2) {
+                    attachmentText = "アタッチメント2個使用（連結）";
+                    blockCount = 2;
+                } else {
+                    hasError = true;
+                    errorMessage = `⚠️ クランプ不可: アタッチメントが3個以上連結する必要があるため固定できません（2個連結限界: φ${limit_block2.toFixed(1)}）`;
+                }
+            }
+
+            // --- 3. クリアランスの計算 ---
+            let bodyClearance = 0;
+            let cutClearance = 0;
+            let bevelClearance = 0;
+            let attachmentClearance = 0; // 内径クリアランス
+
+            // 内径クリアランスは、配管が内径を物理的に通過できる限り、常に計算・描画
+            if (pipeOuter <= machineInner) {
+                attachmentClearance = (machineInner - pipeOuter) / 2; // 半径方向の隙間寸法
+            } else {
+                attachmentClearance = 0;
+            }
+
+            // クランプエラーにかかわらず、配管外径が機械外径より小さい限りは
+            // 外径クリアランス（bodyClearance）の計算自体は幾何学的に成立するため、ここで先行して算出します。
+            if (pipeOuter < machineOuter) {
+                bodyClearance = (machineOuter - pipeOuter) / 2;
+                cutClearance = bodyClearance + 110;
+                bevelClearance = bodyClearance + machineBS;
+            }
+
+            if (!hasError) {
+                // ステータス表示 (正常 or 未所有警告)
+                let successMsg = `（${attachmentText}）`;
+                if (isOwned) {
+                    statusDisplay.className = "status-badge status-ok";
+                    statusDisplay.innerHTML = `<span>✓ チェック良好: ${pipeSizeText} ＋ ${machineModelName} は正常に加工可能です<br>${successMsg}</span>`;
+                } else {
+                    statusDisplay.className = "status-badge status-warning";
+                    statusDisplay.innerHTML = `<span>⚠️ チェック良好（未所有）: 正常に装着可能ですが自社未所有機器です。 ${successMsg}</span>`;
+                }
+            } else {
+                // エラー時のステータス表示
+                statusDisplay.className = "status-badge status-error";
+                statusDisplay.innerHTML = `<span>${errorMessage}</span>`;
+            }
+
+            // 「本体クリアランス (A)」カードは、クランプエラー時であっても
+            // 物理的に配管が機械内を通る（pipeOuter < machineOuter）限り数値を非表示（---）にせず、常に算出クリアランスを表示します。
+            if (pipeOuter < machineOuter) {
+                cardBodyVal.textContent = bodyClearance.toFixed(2);
+            } else {
+                cardBodyVal.textContent = "---";
+            }
+            // 加工機外径と加工機内径を併記して2段目に表示することで、数値のミスマッチ感を完全に排除
+            cardInnerVal.textContent = `φ${machineOuter.toFixed(1)} / φ${machineInner.toFixed(1)}`; 
+
+            // 回転域半径（B）（C）は、クランプ加工そのものができないため、hasError の場合は従来どおり --- とします
+            cardCutVal.textContent = hasError ? "---" : cutClearance.toFixed(2);
+            cardBevelVal.textContent = hasError ? "---" : bevelClearance.toFixed(2);
+
+            // --- 4. SVG描画サイズの実寸比率アップデート ---
+            const r_pipe_mm = pipeOuter / 2;
+            const r_machine_outer_mm = machineOuter / 2;
+            const r_machine_inner_mm = machineInner / 2;
+            const r_cut_mm = r_pipe_mm + (hasError ? 110 : cutClearance);
+            const r_bevel_mm = r_pipe_mm + (hasError ? machineBS : bevelClearance);
+
+            // ピクセル変換
+            const r_pipe_px = r_pipe_mm * scale;
+            const r_machine_outer_px = r_machine_outer_mm * scale;
+            const r_machine_inner_px = r_machine_inner_mm * scale;
+            const r_cut_px = r_cut_mm * scale;
+            const r_bevel_px = r_bevel_mm * scale;
+
+            // 座標計算
+            const x_center = 200;
+            const y_center = 200;
+            const x_pipe_wall_right = x_center + r_pipe_px;
+            const x_pipe_wall_left = x_center - r_pipe_px; // 左エリア：配管外径壁
+            const x_machine_inner_left = x_center - r_machine_inner_px; // 左エリア：機械内径壁
+            const x_machine_wall = x_center + r_machine_outer_px;
+            const x_cut_wall = x_center + r_cut_px;
+            const x_bevel_wall = x_center + r_bevel_px;
+
+            // 各サークルの半径更新
+            pipeCircle.setAttribute("r", r_pipe_px);
+            svgPipeVal.textContent = `φ${pipeOuter}`;
+            machineInnerCircle.setAttribute("r", r_machine_inner_px);
+            machineCircleDash.setAttribute("r", r_machine_outer_px);
+            machineCircleSolid.setAttribute("r", r_machine_outer_px + 3.5);
+            cutLimitCircle.setAttribute("r", r_cut_px);
+            bevelLimitCircle.setAttribute("r", r_bevel_px);
+
+            // --- 機械肉厚（ドーナツ）のパスを再計算して塗りつぶし更新 ---
+            const donutPath = `M 200,${200 - r_machine_outer_px} 
+                               A ${r_machine_outer_px},${r_machine_outer_px} 0 1,0 200,${200 + r_machine_outer_px} 
+                               A ${r_machine_outer_px},${r_machine_outer_px} 0 1,0 200,${200 - r_machine_outer_px} 
+                               Z 
+                               M 200,${200 - r_machine_inner_px} 
+                               A ${r_machine_inner_px},${r_machine_inner_px} 0 1,1 200,${200 + r_machine_inner_px} 
+                               A ${r_machine_inner_px},${r_machine_inner_px} 0 1,1 200,${200 - r_machine_inner_px} 
+                               Z`;
+            machineDonut.setAttribute("d", donutPath);
+
+            // 機械ラベル位置の同期
+            machineLabel.setAttribute("y", x_center - r_machine_outer_px - 8);
+            machineLabel.textContent = `${machineModelName} 本体枠` + (isOwned ? "" : " (未所有)");
+
+            // --- 5. アタッチメントブロックの実寸配置グラフィック制御 ---
+            blocksContainer.innerHTML = ""; // 過去の描画をクリア
+            if (!hasError && blockCount > 0) {
+                const w_px = 32.0 * scale;   // 周方向 of ブロック幅 (32mm)
+                const t_px = 45.7 * scale;   // 半径方向 of ブロック有効寸法 (45.7mm)
+
+                // ヘルパー関数: ブロックの四角形SVG要素を作成
+                const createBlockElement = (x, y, w, h) => {
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("x", x);
+                    rect.setAttribute("y", y);
+                    rect.setAttribute("width", w);
+                    rect.setAttribute("height", h);
+                    rect.setAttribute("fill", "#c084fc"); // 内径クリアランスと同じ紫
+                    rect.setAttribute("fill-opacity", "0.85");
+                    rect.setAttribute("stroke", "#1e293b"); // 暗いベース境界線でメリハリを付与
+                    rect.setAttribute("stroke-width", "1");
+                    rect.setAttribute("rx", "1.5"); // 精密な角丸処理
+                    rect.setAttribute("ry", "1.5");
+                    return rect;
+                };
+
+                // 【右方向 (0度)】配管の右外壁から外側へ伸長
+                blocksContainer.appendChild(createBlockElement(x_center + r_pipe_px, y_center - w_px / 2, t_px, w_px));
+                if (blockCount === 2) {
+                    blocksContainer.appendChild(createBlockElement(x_center + r_pipe_px + t_px, y_center - w_px / 2, t_px, w_px));
+                }
+
+                // 【左方向 (180度)】配管の左外壁から外側へ伸長
+                blocksContainer.appendChild(createBlockElement(x_center - r_pipe_px - t_px, y_center - w_px / 2, t_px, w_px));
+                if (blockCount === 2) {
+                    blocksContainer.appendChild(createBlockElement(x_center - r_pipe_px - 2 * t_px, y_center - w_px / 2, t_px, w_px));
+                }
+
+                // 【下方向 (90度)】配管の下外壁から外側へ伸長
+                blocksContainer.appendChild(createBlockElement(x_center - w_px / 2, y_center + r_pipe_px, w_px, t_px));
+                if (blockCount === 2) {
+                    blocksContainer.appendChild(createBlockElement(x_center - w_px / 2, y_center + r_pipe_px + t_px, w_px, t_px));
+                }
+
+                // 【上方向 (270度)】配管の上外壁から外側へ伸長
+                blocksContainer.appendChild(createBlockElement(x_center - w_px / 2, y_center - r_pipe_px - t_px, w_px, t_px));
+                if (blockCount === 2) {
+                    blocksContainer.appendChild(createBlockElement(x_center - w_px / 2, y_center - r_pipe_px - 2 * t_px, w_px, t_px));
+                }
+            }
+
+            // --- 6. 寸法線・グラフィックの描画制御 ---
+            
+            // 内径クリアランス（紫・縦寸法線）の描画制御
+            if (attachmentClearance > 0) {
+                lineAttachment.setAttribute("stroke-opacity", "1");
+                auxAttachLeft.setAttribute("stroke-opacity", "1");
+                auxAttachRight.setAttribute("stroke-opacity", "1");
+
+                // Y=200 が中心。上方向へ配管半径(r_pipe_px)、さらに上方向へ機械内径半径(r_machine_inner_px)をマッピング
+                const y_pipe_wall_top = y_center - r_pipe_px;
+                const y_machine_inner_top = y_center - r_machine_inner_px;
+
+                lineAttachment.setAttribute("x1", "115");
+                lineAttachment.setAttribute("y1", y_pipe_wall_top);
+                lineAttachment.setAttribute("x2", "115");
+                lineAttachment.setAttribute("y2", y_machine_inner_top);
+
+                auxAttachLeft.setAttribute("x1", x_pipe_wall_left);
+                auxAttachLeft.setAttribute("y1", y_pipe_wall_top);
+                auxAttachLeft.setAttribute("x2", "103");
+                auxAttachLeft.setAttribute("y2", y_pipe_wall_top);
+
+                auxAttachRight.setAttribute("x1", x_machine_inner_left);
+                auxAttachRight.setAttribute("y1", y_machine_inner_top);
+                auxAttachRight.setAttribute("x2", "103");
+                auxAttachRight.setAttribute("y2", y_machine_inner_top);
+
+                const y_mid_attach = (y_pipe_wall_top + y_machine_inner_top) / 2;
+                lblAttachVal.setAttribute("y", y_mid_attach + 5);
+                lblAttachTitle.setAttribute("y", y_mid_attach + 18);
+                lblAttachVal.textContent = attachmentClearance.toFixed(2);
+                
+                lblAttachVal.setAttribute("fill-opacity", "1");
+                lblAttachTitle.setAttribute("fill-opacity", "1");
+            } else {
+                lineAttachment.setAttribute("stroke-opacity", "0");
+                auxAttachLeft.setAttribute("stroke-opacity", "0");
+                auxAttachRight.setAttribute("stroke-opacity", "0");
+                lblAttachVal.setAttribute("fill-opacity", "0");
+                lblAttachTitle.setAttribute("fill-opacity", "0");
+            }
+
+            // 右側の加工用寸法線（本体外径・回転域ベース・回転域ブリッジ）の描画制御
+            if (hasError) {
+                pipeCircle.setAttribute("stroke", "#ef4444");
+                machineInnerCircle.setAttribute("stroke", "#ef4444");
+                machineCircleDash.setAttribute("stroke", "#475569");
+                machineCircleSolid.setAttribute("stroke", "#475569");
+                machineDonut.setAttribute("fill", "rgba(239, 68, 68, 0.08)");
+
+                lblBodyVal.textContent = "N/A";
+                lblCutVal.textContent = "N/A";
+                lblBevelVal.textContent = "N/A";
+
+                // ライン類の不透明度を下げて非表示に近づける
+                lineBody.setAttribute("stroke-opacity", "0.2");
+                auxBodyLeft.setAttribute("stroke-opacity", "0.2");
+                auxBodyRight.setAttribute("stroke-opacity", "0.2");
+
+                lineCut.setAttribute("stroke-opacity", "0.2");
+                auxCutLeft.setAttribute("stroke-opacity", "0.2");
+                auxCutRight.setAttribute("stroke-opacity", "0.2");
+
+                lineBevel.setAttribute("stroke-opacity", "0.2");
+                auxBevelLeft.setAttribute("stroke-opacity", "0.2");
+                auxBevelRight.setAttribute("stroke-opacity", "0.2");
+            } else {
+                // 正常時・未所有機のカラー
+                pipeCircle.setAttribute("stroke", "#94a3b8");
+                machineInnerCircle.setAttribute("stroke", "#dc2626");
+                machineCircleDash.setAttribute("stroke", "#475569");
+                machineCircleSolid.setAttribute("stroke", isOwned ? "#facc15" : "#f97316");
+                machineDonut.setAttribute("fill", isOwned ? "rgba(148, 163, 184, 0.22)" : "rgba(249, 115, 22, 0.08)");
+
+                // 各種寸法線の表示設定
+                lineBody.setAttribute("stroke-opacity", "1");
+                auxBodyLeft.setAttribute("stroke-opacity", "1");
+                auxBodyRight.setAttribute("stroke-opacity", "1");
+
+                lineCut.setAttribute("stroke-opacity", "1");
+                auxCutLeft.setAttribute("stroke-opacity", "1");
+                auxCutRight.setAttribute("stroke-opacity", "1");
+
+                lineBevel.setAttribute("stroke-opacity", "1");
+                auxBevelLeft.setAttribute("stroke-opacity", "1");
+                auxBevelRight.setAttribute("stroke-opacity", "1");
+
+                // A (本体クリアランス) の更新
+                lineBody.setAttribute("x1", x_pipe_wall_right);
+                lineBody.setAttribute("x2", x_machine_wall);
+                auxBodyLeft.setAttribute("x1", x_pipe_wall_right);
+                auxBodyLeft.setAttribute("x2", x_pipe_wall_right);
+                auxBodyRight.setAttribute("x1", x_machine_wall);
+                auxBodyRight.setAttribute("x2", x_machine_wall);
+
+                const x_mid_body = (x_pipe_wall_right + x_machine_wall) / 2;
+                lblBodyVal.setAttribute("x", x_mid_body);
+                lblBodyTitle.setAttribute("x", x_mid_body);
+                lblBodyVal.textContent = bodyClearance.toFixed(2);
+
+                // B (回転域ベース) の更新
+                lineCut.setAttribute("x1", x_pipe_wall_right);
+                lineCut.setAttribute("x2", x_cut_wall);
+                auxCutLeft.setAttribute("x1", x_pipe_wall_right);
+                auxCutLeft.setAttribute("x2", x_pipe_wall_right);
+                auxCutRight.setAttribute("x1", x_cut_wall);
+                auxCutRight.setAttribute("x2", x_cut_wall);
+
+                const x_mid_cut = (x_pipe_wall_right + x_cut_wall) / 2;
+                lblCutVal.setAttribute("x", x_mid_cut);
+                lblCutTitle.setAttribute("x", x_mid_cut);
+                lblCutVal.textContent = cutClearance.toFixed(2);
+
+                // C (回転域ブリッジ) の更新
+                lineBevel.setAttribute("x1", x_pipe_wall_right);
+                lineBevel.setAttribute("x2", x_bevel_wall);
+                auxBevelLeft.setAttribute("x1", x_pipe_wall_right);
+                auxBevelLeft.setAttribute("x2", x_pipe_wall_right);
+                auxBevelRight.setAttribute("x1", x_bevel_wall);
+                auxBevelRight.setAttribute("x2", x_bevel_wall);
+
+                const x_mid_bevel = (x_pipe_wall_right + x_bevel_wall) / 2;
+                lblBevelVal.setAttribute("x", x_mid_bevel);
+                lblBevelTitle.setAttribute("x", x_mid_bevel);
+                lblBevelVal.textContent = bevelClearance.toFixed(2);
+            }
+        }
+
+        // セレクター変更イベントの登録
+        selectPipe.addEventListener("change", runSimulation);
+        selectMachine.addEventListener("change", runSimulation);
+
+        // 初回ロード時実行
+        runSimulation();
+    });
+</script>
+
+</body>
+</html>
